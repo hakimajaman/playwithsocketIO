@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('chatserver:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+var io = require('socket.io')(server)
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+io.on('connection', socket => {
+  console.log('masuk user bung')
+
+  /* pahami dari sini sampai */
+  socket.on('cobaTrigger', () => {
+    console.log('masuk trigger bung')
+  })
+
+  socket.on('kirimDataKeClient', (dataClient, cb) => {
+    socket.emit('receiveData', {pesan: 'ini datanya'})
+  })
+
+  socket.on("createUser", (user, cb) => {
+    console.log(user)
+    users.addUser({
+      ...user,
+      id: socket.id
+    })
+    cb({ id: socket.id })
+  })
+
+  /* sampai sini aja mas choi*/
+
+  socket.on('joinRoom', user => {
+    socket.join(user.room)
+    io.to(user.room).emit('updateUsers', users.getUserByRoom(user.room))
+    socket.emit('newMessage', new Message('admin', `Hello ${user.name}`))
+    socket.broadcast.to(user.room).emit('newMessage', new Message('admin', `User ${user.name} connected to chat`))
+  })
+
+  socket.on('leftChat', cb => {
+    const id = socket.id
+    const user = users.getUser(id)
+    if(user) {
+      user.removeUser(id)
+      socket.leave(user.room)
+      io.to(user.room).emit('updateUsers', users.getUserByRoom(user.room))
+      io.to(user.room).emit('newMessage', new Message('admin', `User ${user.name} left chat`))
+    }
+    cb()
+  })
+
+  socket.on('createMessage', (data, cb) => {
+    const user = users.getUser(data.id)
+    if(user) {
+      io.to(user.room).emit('newMessage', new Message(user.name, data.text, data.id))
+    }
+    cb()
+  })
+})
+
+var users = require('../utils/users')()
+var Message = require('../utils/message')()
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}

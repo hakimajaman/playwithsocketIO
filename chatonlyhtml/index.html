@@ -1,0 +1,35 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.5/socket.io.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <title>hakim aja</title>
+    
+  </head>
+  <body>
+    <h1>Welcome bro</h1>
+    <button id="submitClick" style="marginBottom: 20px;">show console in server</button>
+    <button id="lihatData">Terima data dari server</button>
+
+    <div id="terimaData"></div>
+    <script>
+      var socket = io.connect('localhost:3000')
+      
+      $("#submitClick").click(function() {
+        socket.emit('cobaTrigger')
+      })
+
+      $("#lihatData").click(function() {
+        socket.emit('kirimDataKeClient')
+      })
+
+      socket.on('receiveData', function(data) {
+        console.log('halo')
+        document.getElementById('terimaData').innerHTML = data.pesan
+      })
+    </script>
+  </body>
+
+</html>
